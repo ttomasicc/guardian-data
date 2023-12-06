@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>GuardianData</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"
+            integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V"
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+          integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        nav {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid white;
+        }
+
+        .nav-center {
+            font-size: 30px;
+            text-transform: uppercase;
+        }
+
+        header {
+            background-color: #444;
+            padding: 15px;
+        }
+
+        footer {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            margin-top: auto;
+        }
+
+        main {
+            background-color: #fff;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-top: 10px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .country-datalist {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        button {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        #div_result {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f7f7f7;
+            text-align: center;
+        }
+
+        #div_result label {
+            margin: 0;
+        }
+
+        #lbl_result {
+            font-weight: bold;
+            font-size: xx-large;
+            color: #333;
+        }
+
+        .input-container::before {
+            content: "Default value is 'All'";
+            color: grey;
+            font-size: 12px;
+        }
+
+        .nav-link {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 20px;
+            font-size: 14px;
+            transition: color 0.4s;
+            text-decoration: underline;
+        }
+
+        .nav-link:hover {
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+<nav>
+    <div class="nav-center">Guardian Data</div>
+</nav>
+<header>
+    <a href="/image-filtering" class="nav-link">Image filtering</a>
+</header>
+<main>
+    <h1>Life expectancy</h1>
+
+    <div class="col-sm-10 country-datalist">
+        <label for="country_list">Country:</label>
+        <div class="input-container">
+            <input class="form-control" list="country_options" id="country_list" placeholder="Type to search..."
+                   required value="All">
+        </div>
+
+        <datalist id="country_options">
+            {% for option in options %}
+            <option value="{{ option }}">
+                {% endfor %}
+        </datalist>
+    </div>
+    <form id="frm_predictor" action="/api/v1/predictor" method="POST">
+        <label for="year">Year:</label>
+        <input type="number" min="2000" max="2050" step="1" id="year" name="year" required>
+        <br>
+        <label for="gdp">GDP:</label>
+        <input type="number" min="5000" max="15000" step="1" id="gdp" name="gdp" required>
+        <br>
+        <label for="social_support">Social support (%):</label>
+        <input type="number" min="0" max="100" step="1" id="social_support" name="social_support" required>
+        <br>
+        <label for="freedom">Freedom to make life choices (%):</label>
+        <input type="number" min="0" max="100" step="1" id="freedom" name="freedom" required>
+        <br>
+        <button>Submit</button>
+    </form>
+    <div id="div_result" hidden>
+        <span>Calculated life expectancy is </span>
+        <label id="lbl_result"></label>
+        <span> years.</span>
+        <br>
+        <label id="lbl_result">Elapsed Time:</label>
+        <span id="elapsedTime">0 seconds</span>
+    </div>
+</main>
+<footer>
+    <p>&copy; Copyright: Tin Tomašić, Toni Velkovski, Daniel Škrlac</p>
+</footer>
+</body>
+
+</html>
+
+<script>
+	document.getElementById('frm_predictor').addEventListener('submit', async (e) => {
+		e.preventDefault()
+
+		document.getElementById('country_list').value ||= 'All'
+
+		const result = await calculateResult(getForm())
+		showResult(result)
+	})
+
+	const getForm = () => {
+		return {
+			year: document.getElementById('year').value,
+			gdp: document.getElementById('gdp').value,
+			social_support: document.getElementById('social_support').value,
+			freedom: document.getElementById('freedom').value,
+			country: document.getElementById('country_list').value
+		}
+	}
+
+	const calculateResult = async (data) => {
+		const res = await fetch('/api/v1/predictor', {
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			method: 'POST',
+			body: JSON.stringify(data)
+		})
+		return await res.json()
+	}
+
+	const showResult = (data) => {
+		const { result, elapsed_time } = data
+		const seconds = parseInt(elapsed_time)
+		const ms = (elapsed_time - seconds) * 1000
+
+		document.getElementById('div_result').removeAttribute('hidden')
+		document.getElementById('lbl_result').textContent = isNumeric(result) ? result.toFixed(3) : result
+		document.getElementById('elapsedTime').textContent = `${ Math.round(seconds * 1000 + ms) } ms`;
+	}
+
+	const isNumeric = (data) => !isNaN(parseFloat(data))
+</script>
